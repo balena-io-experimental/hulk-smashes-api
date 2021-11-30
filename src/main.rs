@@ -92,7 +92,7 @@ async fn main() {
     let client = Client::new();
 
     // Spawn one task per API key to make things simpler. Tasks are synchronized with a semaphore
-    println!("Running");
+    println!("Spawning tasks...");
     for (i, (api_key, mut device_ids)) in api_key_device_map.into_iter().enumerate() {
         let base_url = base_url.clone();
         let semaphore = semaphore.clone();
@@ -137,6 +137,8 @@ async fn main() {
             }
         });
     }
+
+    println!("We're cooking!");
 
     // Status reporting
     let sleep_for = 30;
