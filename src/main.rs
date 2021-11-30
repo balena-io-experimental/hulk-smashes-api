@@ -141,7 +141,7 @@ async fn main() {
     println!("We're cooking!");
 
     // Status reporting
-    let sleep_for = 30;
+    let sleep_for = 2;
     loop {
         tokio::time::sleep(Duration::from_secs(sleep_for)).await;
         let n_inflight_requests = n_inflight_requests.load(Ordering::Acquire);
