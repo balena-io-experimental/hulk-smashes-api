@@ -149,7 +149,7 @@ async fn main() {
             "{} requests in flight / {:0.2} requests per minute / {:0.2}s average per request",
             n_inflight_requests,
             requests_per_second * 60.0,
-            1.0 / requests_per_second
+            (concurrency as f32) / requests_per_second
         );
     }
 }
