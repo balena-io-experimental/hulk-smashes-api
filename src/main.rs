@@ -53,6 +53,11 @@ async fn main() {
         min_n_api_keys, API_KEY_REQUESTS_PER_MINUTE, AVERAGE_REQUEST_TIME
     );
 
+    println!(
+        "Maximum theoretical throughput is {} requests per minute",
+        (concurrency as f32) * API_KEY_REQUESTS_PER_MINUTE
+    );
+
     println!("Reading devices...");
     let mut api_key_device_map = HashMap::new();
     for line in BufReader::new(File::open(args.value_of_os("devices").unwrap()).unwrap()).lines() {
