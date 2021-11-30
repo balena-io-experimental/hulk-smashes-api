@@ -14,7 +14,7 @@ use std::{
 };
 use tokio::sync::Semaphore;
 
-const API_KEY_REQUESTS_PER_MINUTE: f32 = 500.0;
+const API_KEY_REQUESTS_PER_MINUTE: f32 = 600.0;
 const AVERAGE_REQUEST_TIME: f32 = 0.1;
 
 static PATCH_PAYLOAD: &str = r#"{
