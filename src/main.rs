@@ -12,7 +12,7 @@ use std::{
     },
     time::{Duration, Instant},
 };
-use tokio::{runtime::Builder, sync::Semaphore};
+use tokio::{runtime::Runtime, sync::Semaphore};
 
 const API_KEY_REQUESTS_PER_MINUTE: f32 = 600.0;
 const AVERAGE_REQUEST_TIME: f32 = 0.1;
@@ -97,11 +97,7 @@ fn main() {
 
     // Spawn one task per API key to make things simpler. Tasks are synchronized with a semaphore
     println!("Spawning tasks...");
-    let runtime = Builder::new_multi_thread()
-        .enable_all()
-        .worker_threads(12)
-        .build()
-        .unwrap();
+    let runtime = Runtime::new().unwrap();
     for (i, (api_key, mut device_ids)) in api_key_device_map.into_iter().enumerate() {
         let base_url = base_url.clone();
         let semaphore = semaphore.clone();
