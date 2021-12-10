@@ -12,7 +12,7 @@ use std::{
     },
     time::{Duration, Instant},
 };
-use tokio::sync::Semaphore;
+use tokio::{runtime::Builder, sync::Semaphore};
 
 const API_KEY_REQUESTS_PER_MINUTE: f32 = 600.0;
 const AVERAGE_REQUEST_TIME: f32 = 0.1;
@@ -28,8 +28,7 @@ static PATCH_PAYLOAD: &str = r#"{
   }
 }"#;
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let args = App::new("HULKHULKHULK")
         .args(&[
             Arg::with_name("url").help("Base URL for API calls."),
@@ -98,6 +97,11 @@ async fn main() {
 
     // Spawn one task per API key to make things simpler. Tasks are synchronized with a semaphore
     println!("Spawning tasks...");
+    let runtime = Builder::new_multi_thread()
+        .enable_all()
+        .worker_threads(12)
+        .build()
+        .unwrap();
     for (i, (api_key, mut device_ids)) in api_key_device_map.into_iter().enumerate() {
         let base_url = base_url.clone();
         let semaphore = semaphore.clone();
@@ -105,7 +109,7 @@ async fn main() {
         let n_requests = n_requests.clone();
         let client = client.clone();
 
-        tokio::spawn(async move {
+        runtime.spawn(async move {
             device_ids.shrink_to_fit();
             let mut rng = SmallRng::seed_from_u64(i as u64);
 
@@ -121,15 +125,16 @@ async fn main() {
                     client.get(url).bearer_auth(&api_key)
                 } else {
                     client.patch(url).bearer_auth(&api_key).body(PATCH_PAYLOAD)
-                };
+                }
+                .header("Keep-alive", "600");
                 n_inflight_requests.fetch_add(1, Ordering::Release);
                 match request.send().await {
                     Ok(response) => {
                         if !response.status().is_success() {
-                            println!("Received status code {}", response.status())
+                            eprintln!("Received status code {}", response.status())
                         }
                     }
-                    Err(err) => println!("Error: {}", err),
+                    Err(err) => eprintln!("Error: {}", err),
                 }
                 n_inflight_requests.fetch_sub(1, Ordering::Release);
                 n_requests.fetch_add(1, Ordering::Release);
@@ -146,17 +151,19 @@ async fn main() {
     println!("We're cooking!");
 
     // Status reporting
-    let sleep_for = 2;
-    loop {
-        tokio::time::sleep(Duration::from_secs(sleep_for)).await;
-        let n_inflight_requests = n_inflight_requests.load(Ordering::Acquire);
-        let requests_per_second =
-            (n_requests.swap(0, Ordering::Acquire) as f32) / (sleep_for as f32);
-        println!(
-            "{} requests in flight / {:0.2} requests per minute / {:0.2}s average per request",
-            n_inflight_requests,
-            requests_per_second * 60.0,
-            (concurrency as f32) / requests_per_second
-        );
-    }
+    runtime.block_on(async move {
+        let sleep_for = 2;
+        loop {
+            tokio::time::sleep(Duration::from_secs(sleep_for)).await;
+            let n_inflight_requests = n_inflight_requests.load(Ordering::Acquire);
+            let requests_per_second =
+                (n_requests.swap(0, Ordering::Acquire) as f32) / (sleep_for as f32);
+            println!(
+                "{} requests in flight / {:0.2} requests per minute / {:0.2}s average per request",
+                n_inflight_requests,
+                requests_per_second * 60.0,
+                (concurrency as f32) / requests_per_second
+            );
+        }
+    });
 }
