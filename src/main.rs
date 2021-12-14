@@ -113,30 +113,50 @@ fn main() {
                 let _pass = semaphore.acquire().await;
                 let start = Instant::now();
 
-                let is_get = rng.gen_bool(0.5);
                 let index = rng.gen_range(0..device_ids.len());
-
                 let url = format!("{}/device/v2/{}/state", base_url, device_ids[index]);
-                let request = if is_get {
-                    client.get(url).bearer_auth(&api_key)
-                } else {
-                    client.patch(url).bearer_auth(&api_key).body(PATCH_PAYLOAD)
-                }
-                .header("Keep-alive", "600");
+                let request = client
+                    .patch(&url)
+                    .bearer_auth(&api_key)
+                    .body(PATCH_PAYLOAD)
+                    .header("Keep-alive", "600");
                 n_inflight_requests.fetch_add(1, Ordering::Release);
                 match request.send().await {
                     Ok(response) => {
                         if !response.status().is_success() {
-                            eprintln!("Received status code {}", response.status())
+                            eprintln!("Received status code {} on PATCH", response.status())
                         }
                     }
-                    Err(err) => eprintln!("Error: {}", err),
+                    Err(err) => eprintln!("PATCH error: {}", err),
                 }
                 n_inflight_requests.fetch_sub(1, Ordering::Release);
                 n_requests.fetch_add(1, Ordering::Release);
 
                 let end = Instant::now();
-                let elapsed = end - start;
+                let elapsed_patch = end - start;
+
+                let start = Instant::now();
+
+                let request = client
+                    .get(url)
+                    .bearer_auth(&api_key)
+                    .header("Keep-alive", "600");
+                n_inflight_requests.fetch_add(1, Ordering::Release);
+                match request.send().await {
+                    Ok(response) => {
+                        if !response.status().is_success() {
+                            eprintln!("Received status code {} on GET", response.status())
+                        }
+                    }
+                    Err(err) => eprintln!("GET error: {}", err),
+                }
+                n_inflight_requests.fetch_sub(1, Ordering::Release);
+                n_requests.fetch_add(1, Ordering::Release);
+
+                let end = Instant::now();
+                let elapsed_get = end - start;
+
+                let elapsed = elapsed_patch + elapsed_get;
                 if elapsed < average_safe_request_time {
                     tokio::time::sleep(average_safe_request_time - elapsed).await;
                 }
