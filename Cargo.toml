@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = "2.34.0"
-rand = { version = "0.8.4", default-features = false, features = ["small_rng"] }
-reqwest = { version = "0.11.7", default-features = false, features = ["default-tls"] }
-tokio = { version = "1.14.0", default-features = false, features = ["rt-multi-thread", "time", "sync"] }
+clap = "3.2.14"
+rand = { version = "0.8.5", default-features = false, features = ["small_rng"] }
+reqwest = { version = "0.11.11", default-features = false, features = ["default-tls"] }
+tokio = { version = "1.20.0", default-features = false, features = ["rt-multi-thread", "time", "sync"] }
